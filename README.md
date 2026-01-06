@@ -14,6 +14,10 @@
 </p>
 
 These are my forks of melonds adding features I thought should be there already
+
+## 🪚 Ultimate branch [link to branch](https://github.com/PanMenel/melonDS-Menel-Forks/tree/Ultimate-branch)
+*A branch containing all my features for easy access to all of them.*
+
 ## 📺 MenuBarToggle Fork [link to branch](https://github.com/PanMenel/melonDS-Menel-Forks/tree/Menubartoggle)
 *Implemented a hotkey to hide the Menu Bar.*
 
