@@ -38,6 +38,7 @@ I saw that the community really wanted RA support, so I decided to take on the c
 * Basic connectivity and achievement unlocking.
 * Achievements and their info is shown on getting them.
 * Basic Login in EmuSettings under new tab.
+* Multi instance seperate logins
 
 ### 🛠️ Known Issues & Planned Features
 <ul>
@@ -63,10 +64,10 @@ See [BUILD.md](./BUILD.md) for build instructions. this works for menubar fork
 * Dependencies
 * Curl : pacman -S <prefix>-{toolchain,cmake,SDL2,libarchive,enet,zstd,faad2,curl}
 ---
-* here are intructions for building your own RA build but i am not sure if it will work on all pcs
-* git clone -b Retro-Achievements-Implementation --single-branch https://github.com/PanMenel/melonDS-Menel-Forks
+* here are intructions for building your own RA build
+* git clone -b Retro-Achievements-Implementation https://github.com/PanMenel/melonDS-Menel-Forks.git
 * cd melonDS-Menel-Forks
-* cmake -B build -DBUILD_STATIC=ON -DUSE_QT6=OFF -DCMAKE_PREFIX_PATH=$MSYSTEM_PREFIX/qt5-static for static / for dynamic, it is broken for now but fixable easly.
+* for static use:  cmake -B build -G Ninja -DENABLE_RETROACHIEVEMENTS=ON -DBUILD_STATIC=ON -DUSE_QT6=OFF -DCMAKE_PREFIX_PATH=$MSYSTEM_PREFIX/qt5-static     /      for dynamic use: cmake -B build -DENABLE_RETROACHIEVEMENTS=ON
 * cmake --build build
 
 
