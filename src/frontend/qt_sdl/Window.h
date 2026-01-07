@@ -260,6 +260,7 @@ private slots:
 
     void onFullscreenToggled();
     void onMenuBarToggled();
+    void onWindowBorderToggled();
     void onScreenEmphasisToggled();
 
 private:

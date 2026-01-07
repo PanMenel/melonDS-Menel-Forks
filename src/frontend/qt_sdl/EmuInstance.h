@@ -60,6 +60,7 @@ enum
     HK_GuitarGripYellow,
     HK_GuitarGripBlue,
     HK_MenuBarToggle,
+    HK_WindowBorderToggle,
     HK_MAX
 };
 

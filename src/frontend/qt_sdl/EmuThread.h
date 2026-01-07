@@ -158,6 +158,7 @@ signals:
 
     void windowFullscreenToggle();
     void windowMenuBarToggle();
+    void windowBorderToggle();
 
     void swapScreensToggle();
     void screenEmphasisToggle();

@@ -62,6 +62,7 @@ static constexpr std::initializer_list<int> hk_general =
     HK_FrameLimitToggle,
     HK_FullscreenToggle,
     HK_MenuBarToggle,
+    HK_WindowBorderToggle,
     HK_Lid,
     HK_Mic,
     HK_SwapScreens,
