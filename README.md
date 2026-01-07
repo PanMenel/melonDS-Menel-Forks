@@ -124,6 +124,19 @@ As for the rest, the interface should be pretty straightforward. If you have a q
  * limittox for the icon
  * All of you comrades who have been testing melonDS, reporting issues, suggesting shit, etc
 
+
+## Privacy policy
+
+This emulator does not collect, store, or transmit any personal data on its own servers.
+
+If the RetroAchievements feature is enabled, the emulator communicates directly with the RetroAchievements service.
+This includes authentication, achievement unlocks, and related gameplay data.
+All such data is processed according to the RetroAchievements privacy policy.
+
+No additional analytics, telemetry, or tracking is performed by this emulator.
+
+All configuration data is stored locally on the user's device and can be removed at any time by deleting the configuration files.
+
 ## Licenses
 
 [![GNU GPLv3 Image](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)
