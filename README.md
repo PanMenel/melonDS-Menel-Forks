@@ -41,7 +41,7 @@ I saw that the community really wanted RA support, so I decided to take on the c
 * Core frontend implementation.
 * Basic connectivity and achievement unlocking.
 * Achievements and their info is shown on getting them.
-* Basic Login in EmuSettings under new tab.
+* Basic Login in Config under new tab.
 * Multi instance seperate logins
 
 ### 🛠️ Known Issues & Planned Features
