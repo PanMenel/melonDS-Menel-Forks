@@ -348,8 +348,24 @@ void RASettingsDialog::UpdateAchievementsTab()
         row++;
     }
 
-    ui->tblRAAchievements->resizeRowsToContents();
-    ui->tblRAAchievements->setSortingEnabled(true);
+ui->tblRAAchievements->resizeRowsToContents();
+
+ui->tblRAAchievements->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+ui->tblRAAchievements->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+ui->tblRAAchievements->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+ui->tblRAAchievements->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+ui->tblRAAchievements->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+ui->tblRAAchievements->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
+
+    bool anyProgress = false;
+    for (int row = 0; row < ui->tblRAAchievements->rowCount(); ++row) {
+        QTableWidgetItem* item = ui->tblRAAchievements->item(row, 5);
+        if (item && !item->text().isEmpty()) {
+            anyProgress = true;
+            break;
+        }
+    }
+    ui->tblRAAchievements->setColumnHidden(5, !anyProgress);
 }
 void RASettingsDialog::SetBadgeImage(int row, const char* url)
 {

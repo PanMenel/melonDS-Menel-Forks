@@ -244,7 +244,7 @@ void RAContext::LoadGame(const char* hash)
             }
             
             rc_runtime_reset(&context->m_runtime);
-            ResetGameState();
+            context->ResetGameState();
             // ===== SUCCESS =====
             context->pendingLoadFailed = false;
             context->isLoading = false;
