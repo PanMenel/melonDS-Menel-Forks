@@ -6,7 +6,10 @@
 #include <cstdio>
 #include "../rcheevos/include/rc_consoles.h"
 #include "../rcheevos/include/rc_client.h"
+#include "../rcheevos/src/rc_version.h"
+#include "../rcheevos/include/rc_runtime.h"
 #include "RetroAchievements/cacert.c"
+#include "version.h"
 
 extern const unsigned char _accacert[];
 extern const size_t _accacert_len;
@@ -17,7 +20,7 @@ void RAContext::SetDisplayName(const char* name)
 
 const std::string& RAContext::GetDisplayName() const
 {
-    return RAContext::m_displayName;
+    return m_displayName;
 }
 static uint64_t g_ra_mem_reads = 0;
 static uint64_t g_ra_mem_logged = 0;
@@ -54,6 +57,7 @@ void RAContext::Init(melonDS::NDS* nds_)
         );
     rc_client_set_userdata(client, this);
     rc_client_set_allow_background_memory_reads(client, 1);
+    rc_runtime_init(&m_runtime);
     rc_client_set_event_handler(client,
     [](const rc_client_event_t* event, rc_client_t* client)
     {
@@ -78,9 +82,7 @@ void RAContext::Init(melonDS::NDS* nds_)
         break;
     }
     });
-};
-
-
+}
 
 void RAContext::Shutdown()
 {
@@ -88,6 +90,23 @@ void RAContext::Shutdown()
         rc_client_destroy(client);
         client = nullptr;
     }
+    rc_runtime_destroy(&m_runtime);
+    ResetGameState();
+}
+
+uint32_t RC_CCONV RuntimePeek(uint32_t address, uint32_t num_bytes, void* ud)
+{
+    RAContext* ctx = static_cast<RAContext*>(ud);
+    if (!ctx || !ctx->client)
+        return 0;
+
+    uint8_t buffer[4] = {0};
+
+    ctx->ReadMemory(address, buffer, num_bytes, ctx->client);
+
+    uint32_t value = 0;
+    memcpy(&value, buffer, num_bytes);
+    return value;
 }
 
 void RAContext::DoFrame()
@@ -115,18 +134,68 @@ void RAContext::DoFrame()
         return;
     } 
     rc_client_do_frame(client);
+
+    rc_runtime_do_frame(
+        &m_runtime,
+        nullptr,
+        &RuntimePeek,
+        this,
+        nullptr
+    );
+
+    UpdateMeasuredAchievements();
 }
+
+void RAContext::UpdateMeasuredAchievements()
+{
+    if (!client || trackedAchievements.empty())
+        return;
+
+    char formatted[128];
+
+    for (auto& ach : trackedAchievements)
+    {
+        unsigned value = 0;
+        unsigned target = 0;
+
+        if (!rc_runtime_get_achievement_measured(&m_runtime, ach.id, &value, &target))
+            continue;
+
+        rc_runtime_format_achievement_measured(&m_runtime, ach.id, formatted, sizeof(formatted));
+
+        if (value != ach.prev_value)
+        {
+            ach.prev_value = value;
+
+            if (m_onMeasuredProgress)
+                m_onMeasuredProgress(ach.id, value, target, formatted);
+
+            for (auto& full : allAchievements)
+            {
+                if (full.id == ach.id)
+                {
+                    full.measured = true;
+                    full.value = value;
+                    full.target = target;
+                    full.progressText = formatted;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 // ================= Login / Load =================
 
-    void RAContext::SetLoggedIn(bool v)
-    {
+void RAContext::SetLoggedIn(bool v)
+{
     if (m_logged_in == v)
         return;
     m_logged_in = v;
     
-    if (RAContext::m_onLogin)
-        RAContext::m_onLogin();
-    }
+    if (m_onLogin)
+        m_onLogin();
+}
 
 static void LoginPasswordCallback(int result, const char* err, rc_client_t* client, void* userdata)
 {
@@ -151,35 +220,89 @@ static void LoginPasswordCallback(int result, const char* err, rc_client_t* clie
     }
 }
 
-
-
 void RAContext::LoadGame(const char* hash)
 {
     if (!client) return;
     rc_client_begin_load_game(
         client,
         hash,
-        [](int result, const char* err, rc_client_t*, void* userdata) {
+        [](int result, const char* err, rc_client_t*, void* userdata)
+        {
             auto* context = static_cast<RAContext*>(userdata);
 
-            if (result == 0) {
-                context->pendingLoadFailed = false;
-                context->isLoading = false;
-                context->gameLoaded = true;
-                context->currentGameInfo = rc_client_get_game_info(context->client);
-                if (context->onGameLoaded){
-                    context->onGameLoaded();}
-            }
-            else {
+            if (result != RC_OK)
+            {
                 context->gameLoaded = false;
-                context->pendingLoadError = err;
+                context->pendingLoadError = err ? err : "Unknown error";
                 context->pendingLoadFailed = true;
                 context->isLoading = false;
-                if (context->onGameLoaded) {
-                    context->onGameLoaded(); 
-                }
-                
+
+                if (context->onGameLoaded)
+                    context->onGameLoaded();
+
+                return;
             }
+            
+            rc_runtime_reset(&context->m_runtime);
+            ResetGameState();
+            // ===== SUCCESS =====
+            context->pendingLoadFailed = false;
+            context->isLoading = false;
+            context->gameLoaded = true;
+            context->currentGameInfo = rc_client_get_game_info(context->client);
+
+            rc_client_achievement_list_t* list = rc_client_create_achievement_list(
+                context->client,
+                RC_CLIENT_ACHIEVEMENT_CATEGORY_CORE_AND_UNOFFICIAL,
+                RC_CLIENT_ACHIEVEMENT_LIST_GROUPING_PROGRESS
+            );
+
+            for (uint32_t i = 0; i < list->num_buckets; ++i) {
+                const rc_client_achievement_bucket_t& bucket = list->buckets[i];
+
+                for (uint32_t j = 0; j < bucket.num_achievements; ++j) {
+                    const rc_client_achievement_t* ach = bucket.achievements[j];
+
+                    FullAchievement fa;
+                    fa.id = ach->id;
+                    fa.title = ach->title ? ach->title : "";
+                    fa.description = ach->description ? ach->description : "";
+                    fa.points = ach->points;
+                    fa.unlocked = (ach->state == RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED);
+
+                    fa.measured = ach->measured_progress[0] != '\0';
+                    fa.value = 0;
+                    fa.target = fa.measured ? std::stoi(ach->measured_progress) : 0;
+                    fa.progressText.clear();
+
+                    std::strncpy(fa.badge_name, ach->badge_name, sizeof(fa.badge_name));
+                    fa.measured_percent = ach->measured_percent;
+                    fa.unlock_time = ach->unlock_time;
+                    fa.state = ach->state;
+                    fa.category = ach->category;
+                    fa.bucket = ach->bucket;
+                    fa.rarity = ach->rarity;
+                    fa.rarity_hardcore = ach->rarity_hardcore;
+                    fa.type = ach->type;
+                    fa.badge_url = ach->badge_url;
+                    fa.badge_locked_url = ach->badge_locked_url;
+
+                    fa.bucket_type = bucket.bucket_type;
+                    fa.label = bucket.label;
+                    fa.num_achievements = bucket.num_achievements;
+                    fa.achievements = bucket.achievements;
+
+                    if (fa.measured)
+                        context->trackedAchievements.push_back({ ach->id, 0 });
+
+                    context->allAchievements.push_back(fa);
+                }
+            }
+
+            rc_client_destroy_achievement_list(list);
+
+            if (context->onGameLoaded)
+                context->onGameLoaded();
         },
         this
     );
@@ -194,7 +317,7 @@ uint32_t RAContext::ReadMemory(uint32_t address,
 {
     if (address >= 0x04000000 && address < 0x04000400)
     {
-}
+    }
     g_ra_mem_reads++;
     RAContext* ctx =
         static_cast<RAContext*>(rc_client_get_userdata(client));
@@ -312,7 +435,25 @@ void RAContext::ServerCall(const rc_api_request_t* request,
     curl_easy_setopt(curl, CURLOPT_CAINFO, cacertPath.c_str());
 
     std::string response_body;
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "melonDS/1.1 rcheevos/1.0");
+    std::string rcheevosVer =
+    std::to_string(RCHEEVOS_VERSION_MAJOR) + "." +
+    std::to_string(RCHEEVOS_VERSION_MINOR) + "." +
+    std::to_string(RCHEEVOS_VERSION_PATCH);
+
+    std::string ua =
+        std::string("melonDS-Menel-RA/") + MELONDS_VERSION +
+    #if defined(_WIN32)
+        " (Windows)"
+    #elif defined(__APPLE__)
+        " (macOS)"
+    #elif defined(__linux__)
+        " (Linux)"
+    #else
+        " (UnknownOS)"
+    #endif
+        + " rcheevos/" + rcheevosVer;
+
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, ua.c_str());
     curl_easy_setopt(curl, CURLOPT_URL, request->url);
 
     if (request->post_data) {
@@ -343,6 +484,7 @@ void RAContext::ServerCall(const rc_api_request_t* request,
 void RAContext::Reset() {
     if (client)
         rc_client_reset(client);
+        ResetGameState();
 }
 
 void RAContext::LoginWithPassword(const char* username, const char* password, bool hardcore)
@@ -407,6 +549,7 @@ void RAContext::Disable()
     m_logged_in = false;
     gameLoaded = false;
     pendingGameHash.reset();
+    ResetGameState();
 }
 
 void RAContext::LoginNow()
@@ -422,10 +565,19 @@ void RAContext::LoginNow()
 
 void RAContext::SetOnAchievementUnlocked(AchievementUnlockedCallback cb)
 {
-    RAContext::m_onAchievementUnlocked = std::move(cb);
+    m_onAchievementUnlocked = std::move(cb);
 }
 
 void RAContext::SetOnGameLoadedCallback(std::function<void()> cb)
 {
     onGameLoaded = std::move(cb);
+}
+void RAContext::SetOnMeasuredProgress(MeasuredProgressCallback cb)
+{
+    m_onMeasuredProgress = std::move(cb);
+}
+void RAContext::ResetGameState()
+{
+    trackedAchievements.clear();
+    allAchievements.clear();
 }

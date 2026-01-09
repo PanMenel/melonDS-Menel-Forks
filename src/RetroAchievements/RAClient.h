@@ -5,15 +5,66 @@
 #include <rcheevos/include/rc_client.h>
 #include <optional>
 #include <functional>
+#include <vector>
+#include "../rcheevos/include/rc_runtime.h"
 
 
 using AchievementUnlockedCallback =
     std::function<void(const char* title,
                        const char* desc,
                        const char* badge_url)>;
+using MeasuredProgressCallback =
+    std::function<void(unsigned id,
+                       unsigned value,
+                       unsigned target,
+                       const char* text)>;
+
+struct TrackedAchievement
+{
+    uint32_t id = 0;
+    unsigned prev_value = 0;
+};
 namespace melonDS { class NDS; }
 class RAContext {
 public:
+    friend uint32_t RC_CCONV RuntimePeek(uint32_t, uint32_t, void*);
+    struct FullAchievement
+    {
+        uint32_t id = 0;
+        std::string title;
+        std::string description;
+        uint32_t points = 0;
+        bool unlocked = false;
+
+        bool measured = false;
+        int value = 0;
+        int target = 0;
+        std::string progressText;
+
+        char badge_name[8] = {};
+        float measured_percent = 0.0f;
+        time_t unlock_time = 0;
+        uint8_t state = 0;
+        uint8_t category = 0;
+        uint8_t bucket = 0;
+        float rarity = 0.0f;
+        float rarity_hardcore = 0.0f;
+        uint8_t type = 0;
+        const char* badge_url = nullptr;
+        const char* badge_locked_url = nullptr;
+        const rc_client_achievement_t** achievements = nullptr;
+        uint32_t num_achievements;
+
+        const char* label;
+        uint32_t subset_id;
+        uint8_t bucket_type;
+    };
+
+
+    const std::vector<FullAchievement>& GetAllAchievements() const {
+        return allAchievements;
+    }
+    void ResetGameState();
     RAContext();
     ~RAContext();
     bool m_shuttingDown = false;
@@ -33,6 +84,8 @@ public:
     const rc_client_game_t* GetCurrentGameInfo() const { return currentGameInfo; }
     bool IsGameLoaded() const { return gameLoaded; }
     void SetOnAchievementUnlocked(AchievementUnlockedCallback cb);
+    void SetOnMeasuredProgress(MeasuredProgressCallback cb);
+    void UpdateMeasuredAchievements();
     void LoginNow();
     void Enable();
     void Disable();
@@ -62,8 +115,12 @@ public:
     rc_client_t* client = nullptr;
     bool m_logged_in = false;
 private:
+    rc_runtime_t m_runtime;
+    std::vector<TrackedAchievement> trackedAchievements;
+    std::vector<FullAchievement> allAchievements;
     void SetDisplayName(const char* name);
     AchievementUnlockedCallback m_onAchievementUnlocked;
+    MeasuredProgressCallback m_onMeasuredProgress;
     std::string m_displayName;
     const rc_client_game_t* currentGameInfo = nullptr;
     bool m_enabled = false;
