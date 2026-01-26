@@ -157,9 +157,13 @@ signals:
     void autoScreenSizingChange(int sizing);
 
     void windowFullscreenToggle();
+
+    #ifdef RETROACHIEVEMENTS_ENABLED
     void windowMenuBarToggle();
     void windowBorderToggle();
-
+    void RAOverlayToggle();
+    #endif
+    
     void swapScreensToggle();
     void screenEmphasisToggle();
 

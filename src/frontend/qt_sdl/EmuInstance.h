@@ -60,8 +60,11 @@ enum
     HK_GuitarGripRed,
     HK_GuitarGripYellow,
     HK_GuitarGripBlue,
+    #ifdef RETROACHIEVEMENTS_ENABLED
     HK_MenuBarToggle,
     HK_WindowBorderToggle,
+    HK_RAOverlayToggle,
+    #endif
     HK_MAX
 };
 
@@ -91,9 +94,15 @@ class EmuInstance
 {
 public:
     #ifdef RETROACHIEVEMENTS_ENABLED
+    bool isOverlayActive() const { return overlayActive; }
+    void setOverlayActive(bool v) { overlayActive = v; }
+    void setRAOverlay(RAOverlayWidget* overlay) { raOverlay = overlay; }
+    RAOverlayWidget* getRAOverlay() const { return raOverlay; }
     RAContext* getRA() const { return ra.get(); }
     std::unique_ptr<RAContext> ra;
     void SyncRetroAchievementsFromConfig();
+    bool overlayActive = false;
+    RAOverlayWidget* raOverlay = nullptr;
     #endif
     EmuInstance(int inst);
     ~EmuInstance();
@@ -390,6 +399,9 @@ private:
 
     friend class EmuThread;
     friend class MainWindow;
+    #ifdef RETROACHIEVEMENTS_ENABLED
+    friend class RAOverlayWidget;
+    #endif
 };
 
 #endif //EMUINSTANCE_H

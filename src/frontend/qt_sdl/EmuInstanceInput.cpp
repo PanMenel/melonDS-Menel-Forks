@@ -52,8 +52,11 @@ const char* EmuInstance::hotkeyNames[HK_MAX] =
     "HK_FastForward",
     "HK_FrameLimitToggle",
     "HK_FullscreenToggle",
+    #ifdef RETROACHIEVEMENTS_ENABLED
     "HK_MenuBarToggle",
     "HK_WindowBorderToggle",
+    "HK_RAOverlayToggle",
+    #endif
     "HK_SwapScreens",
     "HK_SwapScreenEmphasis",
     "HK_SolarSensorDecrease",
@@ -440,6 +443,22 @@ void EmuInstance::inputProcess()
             if (joystickButtonDown(joyMapping[i]))
                 joyInputMask &= ~(1 << i);
     }
+
+    #ifdef RETROACHIEVEMENTS_ENABLED
+    static u32 lastJoyInputMask = 0xFFF;
+    u32 joyPress = lastJoyInputMask & ~joyInputMask;
+    lastJoyInputMask = joyInputMask;
+
+    if (overlayActive && raOverlay && raOverlay->isVisible())
+    {
+        uint32_t padState = ~joyInputMask & 0xFFF;
+        raOverlay->updateJoystick(padState);
+
+        inputMask = 0xFFF;
+        keyInputMask = 0xFFF;
+        joyInputMask = 0xFFF;
+    }
+    #endif
 
     inputMask = keyInputMask & joyInputMask;
 

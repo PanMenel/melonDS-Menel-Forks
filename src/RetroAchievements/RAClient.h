@@ -6,7 +6,8 @@
 #include <optional>
 #include <functional>
 #include <vector>
-#include "../rcheevos/include/rc_runtime.h"
+#include <rcheevos/include/rc_runtime.h>
+#include <ctime>
 
 
 using AchievementUnlockedCallback =
@@ -18,15 +19,52 @@ using MeasuredProgressCallback =
                        unsigned value,
                        unsigned target,
                        const char* text)>;
+using AchievementProgressCallback =
+        std::function<void(const char* title,
+                       const char* progress,
+                       const char* badgeUrl)>;
+using ChallengeShowCallback = 
+    std::function<void(const char* badgeUrl)>;
+using ChallengeHideCallback = 
+    std::function<void()>;
+using GameMasteredCallback =
+    std::function<void(const std::string& title,
+                       const char* gameBadge)>;
 
 struct TrackedAchievement
 {
     uint32_t id = 0;
     unsigned prev_value = 0;
 };
-namespace melonDS { class NDS; }
+namespace melonDS { 
+    class NDS; 
+    class Savestate;
+}
 class RAContext {
 public:
+    using PlaytimeLoadHandler = std::function<uint32_t(uint32_t gameId)>;
+    using PlaytimeSaveHandler = std::function<void(uint32_t gameId, uint32_t totalMinutes)>;
+
+    void SetPlaytimeHandlers(PlaytimeLoadHandler loader, PlaytimeSaveHandler saver) {
+        m_playtimeLoader = std::move(loader);
+        m_playtimeSaver = std::move(saver);
+    }
+    int m_suppressProgressFrames = 0;
+    void SaveSavestate(melonDS::Savestate* file);
+    void LoadSavestate(melonDS::Savestate* file);
+
+    void showProgressIndicator(const rc_client_achievement_t* ach);
+    void updateProgressIndicator(const rc_client_achievement_t* ach);
+    void hideProgressIndicator();
+        struct LeaderboardTracker {
+        uint32_t id;
+        std::string display;
+    };
+    std::unordered_map<uint32_t, LeaderboardTracker> activeTrackers;
+    using LeaderboardCallback = std::function<void(const rc_client_leaderboard_t*)>;
+    LeaderboardCallback onLeaderboardStarted;
+    LeaderboardCallback onLeaderboardFailed;
+    LeaderboardCallback onLeaderboardSubmitted;
     friend uint32_t RC_CCONV RuntimePeek(uint32_t, uint32_t, void*);
     struct FullAchievement
     {
@@ -61,9 +99,7 @@ public:
     };
 
 
-    const std::vector<FullAchievement>& GetAllAchievements() const {
-        return allAchievements;
-    }
+    const std::vector<FullAchievement>& GetAllAchievements();
     void ResetGameState();
     RAContext();
     ~RAContext();
@@ -84,6 +120,10 @@ public:
     const rc_client_game_t* GetCurrentGameInfo() const { return currentGameInfo; }
     bool IsGameLoaded() const { return gameLoaded; }
     void SetOnAchievementUnlocked(AchievementUnlockedCallback cb);
+    void SetOnAchievementProgress(AchievementProgressCallback cb);
+    void SetOnChallenge(ChallengeShowCallback cb);
+    void SetOnChallengeHide(ChallengeHideCallback cb);
+    void SetOnGameMastered(GameMasteredCallback cb);
     void SetOnMeasuredProgress(MeasuredProgressCallback cb);
     void UpdateMeasuredAchievements();
     void LoginNow();
@@ -114,13 +154,47 @@ public:
     melonDS::NDS* nds = nullptr;
     rc_client_t* client = nullptr;
     bool m_logged_in = false;
+    const char* GetUserPicURL() const {
+        const rc_client_user_t* user = rc_client_get_user_info(client);
+        return (user) ? user->avatar_url : nullptr;
+    }
+
+    const char* GetGameTitle() const {
+        const rc_client_game_t* game = rc_client_get_game_info(client);
+        return (game) ? game->title : "Unknown Game";
+    }
+
+    const char* GetGameIconURL() const {
+        const rc_client_game_t* game = rc_client_get_game_info(client);
+        return (game) ? game->badge_url : nullptr;
+    }
+    
+    uint32_t GetGameID() const {
+        const rc_client_game_t* game = rc_client_get_game_info(client);
+        return (game) ? game->id : 0;
+    }
+    uint32_t GetGamePlaytime() const {
+        if (!gameLoaded || m_sessionStart == 0) return m_accumulatedTime;
+        uint32_t sessionMinutes = (uint32_t)((time(nullptr) - m_sessionStart) / 60);
+        return m_accumulatedTime + sessionMinutes;
+    }
 private:
+    PlaytimeLoadHandler m_playtimeLoader;
+    PlaytimeSaveHandler m_playtimeSaver;
+    void SavePlaytime();
+    time_t m_sessionStart = 0;
+    uint32_t m_accumulatedTime = 0;
+    uint32_t m_currentGameId = 0;
     rc_runtime_t m_runtime;
     std::vector<TrackedAchievement> trackedAchievements;
     std::vector<FullAchievement> allAchievements;
     void SetDisplayName(const char* name);
     AchievementUnlockedCallback m_onAchievementUnlocked;
     MeasuredProgressCallback m_onMeasuredProgress;
+    AchievementProgressCallback m_onAchievementProgress;
+    ChallengeShowCallback m_onChallenge;
+    ChallengeHideCallback m_onChallengeHide;
+    GameMasteredCallback m_OnGameMastered;
     std::string m_displayName;
     const rc_client_game_t* currentGameInfo = nullptr;
     bool m_enabled = false;
