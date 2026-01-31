@@ -45,17 +45,18 @@ I saw that the community really wanted RA support, so I decided to take on the c
 * Basic connectivity and achievement unlocking.
 * Achievements and their info is shown on getting them.
 * Basic Login in Config under new tab.
-* Multi instance seperate logins
+* Multi instance separate logins
+* Leaderboards implemented but not submitted yet.
+* Fully functional Overlay that shows achievements and their progress
+* Progress Indicators and Challenge Indicators fully implemented
+* Info on losing an Internet connection and restoring it are implemented
+* Fully working Hardcore blocks that stop you from cheating.(may have overlooked some more advanced but main easy access cheats are blocked)
 
 ### 🛠️ Known Issues & Planned Features
 <ul>
-  <li><b>Leaderboards:</b> Not yet implemented.</li>
-  <li><b>Overlay:</b> Missing in-game achievement list.</li>
-  <li><b>Progress Indicators:</b> Achievement progress is not currently tracked visually, there is only notification on getting achievement.</li>
-  <li><b>Hardcore Approval:</b> Still fixing stuff, so when it will be more than a beta then it could be possible.</li>
-  <li><b>Memory Access:</b> VRAM and ARM9 IO memory reading is missing (may affect specific achievements, but i wouldn't worry about that).</li>
-  <li><b>Offline Caching:</b> Session recovery works, but the emulator does not cache achievement data to local files yet.</li>
-  <li><b>Player Profile:</b> Visible points and profile integration (optional).</li>
+  <li><b>Performance Concerns, mainly random lags possibly by poor coding.</li>
+  <li><b>Badly Written AI code (Will be improved massively).</li>
+  <li><b>Hardcore Approval to get rid of that achievment and allow users to earn hardcore achievements.</li>
 </ul>
 
 > [!NOTE]
