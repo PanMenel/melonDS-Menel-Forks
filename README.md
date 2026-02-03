@@ -54,7 +54,7 @@ I saw that the community really wanted RA support, so I decided to take on the c
 
 ### 🛠️ Known Issues & Planned Features
 <ul>
-  <li><b>Performance Concerns, mainly random lags possibly by poor coding.</li>
+  <li><b>Performance Concerns?, maybe fixed but needs more testing.</li>
   <li><b>Badly Written AI code (Will be improved massively).</li>
   <li><b>Hardcore Approval to get rid of that achievment and allow users to earn hardcore achievements.</li>
 </ul>
