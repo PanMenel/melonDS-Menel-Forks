@@ -84,6 +84,9 @@ See [BUILD.md](./BUILD.md) for build instructions. this works for menubar fork
 ### 🎮 Twitch
 Catch me live on **[My Twitch Channel](https://www.twitch.tv/panmenelg)**! I stream my development process and some gameplay. Feel free to drop by, and say hi!
 
+### 💬 Discord
+Join the community on **[My Discord Server](https://discord.gg/KJq6ekQR5C)**! It's the best place to get updates on my projects, ask for help, or just hang out.
+
 ### ☕ Donate
 If you find my forks useful and want to support further development, you can buy me a coffee here:
 **[There is no better way to thank me for my work ;D](https://ko-fi.com/panmenel)**
