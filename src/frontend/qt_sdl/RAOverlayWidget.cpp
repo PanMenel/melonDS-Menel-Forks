@@ -8,9 +8,9 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QTimer>
-
-
-
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QUrl>
 #include <QPointer>
 #include <QDebug>
 #include <QDateTime>
@@ -494,11 +494,10 @@ bool RAOverlayWidget::eventFilter(QObject* obj, QEvent* event) {
 void RAOverlayWidget::SetBadgeImage(AchievementItemWidget* item, const char* url) {
     if (!url || !*url || !item) return;
     QString qurl = QString::fromUtf8(url);
+
     QPointer<AchievementItemWidget> safeItem(item);
     badgeCacheManager->DownloadBadge(qurl, [safeItem](const QPixmap& pix) {
-        if (safeItem && !pix.isNull()) {
-            safeItem->updateIcon(pix);
-        }
+        if (safeItem && !pix.isNull()) safeItem->updateIcon(pix);
     });
 }
 
