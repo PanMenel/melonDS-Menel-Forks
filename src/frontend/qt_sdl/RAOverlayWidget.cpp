@@ -8,12 +8,12 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QTimer>
-#include <QNetworkReply>
-#include <QNetworkRequest>
-#include <QUrl>
+
+
+
 #include <QPointer>
 #include <QDebug>
-#include <QDateTime> 
+#include <QDateTime>
 #include <QPainter>
 #include <QPaintEvent>
 #include "Config.h"
@@ -26,7 +26,7 @@
 QWidget* RAOverlayWidget::CreateCollapsibleSection(const QString& title, int count, QVBoxLayout** innerLayout) {
     QPushButton* btn = new QPushButton();
     btn->setCheckable(true);
-    
+
     btn->setStyleSheet(
         "QPushButton {"
         "   background-color: #333;"
@@ -54,7 +54,7 @@ QWidget* RAOverlayWidget::CreateCollapsibleSection(const QString& title, int cou
     *innerLayout = new QVBoxLayout(container);
     (*innerLayout)->setContentsMargins(10, 0, 0, 5);
     (*innerLayout)->setSpacing(2);
-    
+
     auto updateBtnText = [btn, title, count](bool collapsed) {
         btn->setText(QString("%1 %2 (%3)").arg(collapsed ? "▶" : "▼").arg(title).arg(count));
     };
@@ -68,7 +68,7 @@ QWidget* RAOverlayWidget::CreateCollapsibleSection(const QString& title, int cou
     connect(btn, &QPushButton::toggled, [this, title, container, updateBtnText, count](bool checked) {
         container->setVisible(!checked);
         updateBtnText(checked);
-        
+
         if (checked) collapsedSections.insert(title);
         else collapsedSections.erase(title);
     });
@@ -79,8 +79,8 @@ QWidget* RAOverlayWidget::CreateCollapsibleSection(const QString& title, int cou
 RAOverlayWidget::RAOverlayWidget(EmuInstance* emu, QWidget* parent)
     : QGraphicsView(parent), emuInstance(emu)
 {
-    netManager = new QNetworkAccessManager(this);
-    setWindowFlags(Qt::FramelessWindowHint | Qt::SubWindow); 
+    badgeCacheManager = new BadgeCache(this);
+    setWindowFlags(Qt::FramelessWindowHint | Qt::SubWindow);
     setAttribute(Qt::WA_TranslucentBackground);
     setStyleSheet("background: rgba(0, 0, 0, 150); border: none;");
     setFrameShape(QFrame::NoFrame);
@@ -135,7 +135,7 @@ RAOverlayWidget::RAOverlayWidget(EmuInstance* emu, QWidget* parent)
     headerBar->addSpacing(10);
     headerBar->addWidget(avatarLabel);
     headerBar->addWidget(usernameLabel);
-    headerBar->addStretch(); 
+    headerBar->addStretch();
     headerBar->addWidget(gameTitleLabel);
     headerBar->addSpacing(10);
     headerBar->addWidget(gameImgLabel);
@@ -147,7 +147,7 @@ RAOverlayWidget::RAOverlayWidget(EmuInstance* emu, QWidget* parent)
     title->setAlignment(Qt::AlignCenter);
     title->setStyleSheet("font-size: 28px; font-weight: bold; color: #ffffff; margin-top: 5px; margin-bottom: 10px; background: transparent; border: none;");
     root->addWidget(title);
-    
+
     QScrollArea* scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -174,7 +174,7 @@ RAOverlayWidget::RAOverlayWidget(EmuInstance* emu, QWidget* parent)
         "QScrollBar::handle:vertical {"
         "    background: #555;"
         "    border-radius: %2px;"
-        "    min-height: 25px;" 
+        "    min-height: 25px;"
         "}"
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
     ).arg(scrollWidth).arg(radius));
@@ -186,7 +186,7 @@ RAOverlayWidget::RAOverlayWidget(EmuInstance* emu, QWidget* parent)
     listLayout->setAlignment(Qt::AlignTop);
 
     scroll->setWidget(listContainer);
-    root->addWidget(scroll, 1); 
+    root->addWidget(scroll, 1);
 
     proxy = scene->addWidget(contentWidget);
 
@@ -198,7 +198,7 @@ RAOverlayWidget::RAOverlayWidget(EmuInstance* emu, QWidget* parent)
 
     clockTimer = new QTimer(this);
     connect(clockTimer, &QTimer::timeout, this, &RAOverlayWidget::updateClock);
-    clockTimer->start(1000); 
+    clockTimer->start(1000);
     updateClock();
 }
 
@@ -214,7 +214,7 @@ void RAOverlayWidget::toggle() {
         emuInstance->overlayActive = false;
         if (parentWidget()) parentWidget()->setFocus(Qt::OtherFocusReason);
     } else {
-        int instanceID = emuInstance->getInstanceID(); 
+        int instanceID = emuInstance->getInstanceID();
         Config::Table cfg = Config::GetLocalTable(instanceID);
         int rotMode = cfg.GetInt("Window0.ScreenRotation");
         m_currentRotation = rotMode * 90;
@@ -254,7 +254,7 @@ void RAOverlayWidget::refresh() {
 
     float uiScale = shortSide / 600.0f;
     uiScale = std::clamp(uiScale, 0.65f, 1.0f);
-    
+
     if (ra->IsLoggedIn()) {
         usernameLabel->setText(QString::fromStdString(ra->GetUser()));
         const char* picUrl = ra->GetUserPicURL();
@@ -271,15 +271,15 @@ void RAOverlayWidget::refresh() {
 
     int hours = 0;
     int mins = 0;
-    
+
     if (ra->IsGameLoaded()) {
         auto* gameInfo = ra->GetCurrentGameInfo();
         uint32_t gameID = gameInfo ? gameInfo->id : 0;
-        
+
         if (gameID != 0) {
             std::string gameKey = std::to_string(gameID);
             int totalSeconds = Config::GetRAPlaytimeTable().GetInt(gameKey);
-            
+
             hours = totalSeconds / 3600;
             mins = (totalSeconds % 3600) / 60;
         }
@@ -369,7 +369,7 @@ void RAOverlayWidget::updateJoystick(uint32_t joyState) {
     if (!isVisible()) return;
 
     constexpr int BIT_UP = 6, BIT_DOWN = 7, BIT_A = 0;
-    
+
     uint32_t navMask = joyState & ((1 << BIT_UP) | (1 << BIT_DOWN));
     if ((navMask & ~heldMask) != 0) { repeatTimer.restart(); repeating = false; }
     heldMask = navMask;
@@ -389,7 +389,7 @@ void RAOverlayWidget::updateJoystick(uint32_t joyState) {
     bool isAPressed = (joyState & (1 << BIT_A));
     bool wasAPressed = (lastJoyState & (1 << BIT_A));
 
-    if (isAPressed && !wasAPressed) { 
+    if (isAPressed && !wasAPressed) {
         if (auto* btn = qobject_cast<QPushButton*>(contentWidget->focusWidget())) {
             btn->click();
         }
@@ -402,7 +402,7 @@ void RAOverlayWidget::updateJoystick(uint32_t joyState) {
     }
 
     if (navMask == 0) { heldMask = 0; repeating = false; }
-    
+
     lastJoyState = joyState;
 }
 
@@ -410,14 +410,14 @@ bool RAOverlayWidget::event(QEvent* e) {
     if (e->type() == QEvent::KeyPress) {
         QKeyEvent* ke = static_cast<QKeyEvent*>(e);
         Config::Table cfg = Config::GetLocalTable(emuInstance->getInstanceID());
-        
+
         int cfgUp = cfg.GetInt("Keyboard.Up");
         int cfgDown = cfg.GetInt("Keyboard.Down");
         int cfgA = cfg.GetInt("Keyboard.A");
 
         bool isUp = (ke->key() == cfgUp || ke->key() == Qt::Key_Up);
         bool isDown = (ke->key() == cfgDown || ke->key() == Qt::Key_Down);
-        
+
         bool isConfirm = (ke->key() == cfgA || ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter);
 
         if (isUp || isDown) {
@@ -428,13 +428,13 @@ bool RAOverlayWidget::event(QEvent* e) {
         }
 
         if (isConfirm) {
-            if (!ke->isAutoRepeat()) { 
+            if (!ke->isAutoRepeat()) {
                 if (auto* btn = qobject_cast<QPushButton*>(contentWidget->focusWidget())) {
                     btn->click();
                     return true;
                 }
             }
-            return true; 
+            return true;
         }
 
         if (parentWidget()) {
@@ -444,16 +444,16 @@ bool RAOverlayWidget::event(QEvent* e) {
     return QGraphicsView::event(e);
 }
 
-void RAOverlayWidget::updateClock() { 
-    timeLabel->setText(QDateTime::currentDateTime().toString("HH:mm")); 
+void RAOverlayWidget::updateClock() {
+    timeLabel->setText(QDateTime::currentDateTime().toString("HH:mm"));
 
     if (isVisible()) {
         RAContext* ra = emuInstance->getRA();
         if (ra && ra->IsGameLoaded()) {
-            
+
             auto* gameInfo = ra->GetCurrentGameInfo();
             uint32_t gameID = gameInfo ? gameInfo->id : 0;
-            
+
             int totalSeconds = 0;
             if (gameID != 0) {
                 std::string gameKey = std::to_string(gameID);
@@ -492,15 +492,12 @@ bool RAOverlayWidget::eventFilter(QObject* obj, QEvent* event) {
 }
 
 void RAOverlayWidget::SetBadgeImage(AchievementItemWidget* item, const char* url) {
-    if (!url || !*url) return;
+    if (!url || !*url || !item) return;
     QString qurl = QString::fromUtf8(url);
-    if (badgeCache.contains(qurl)) { item->updateIcon(badgeCache[qurl]); return; }
     QPointer<AchievementItemWidget> safeItem(item);
-    QNetworkReply* reply = netManager->get(QNetworkRequest(QUrl(qurl)));
-    connect(reply, &QNetworkReply::finished, this, [this, reply, safeItem, qurl]() {
-        reply->deleteLater();
-        if (safeItem && reply->error() == QNetworkReply::NoError) {
-            QPixmap pix; if (pix.loadFromData(reply->readAll())) { badgeCache.insert(qurl, pix); safeItem->updateIcon(pix); }
+    badgeCacheManager->DownloadBadge(qurl, [safeItem](const QPixmap& pix) {
+        if (safeItem && !pix.isNull()) {
+            safeItem->updateIcon(pix);
         }
     });
 }
@@ -508,16 +505,12 @@ void RAOverlayWidget::SetBadgeImage(AchievementItemWidget* item, const char* url
 void RAOverlayWidget::LoadHeaderImage(QLabel* targetLabel, const char* url, QSize size) {
     if (!url || !*url || !targetLabel) return;
     QString qurl = QString::fromUtf8(url);
-    if (headerImageCache.contains(qurl)) { targetLabel->setPixmap(headerImageCache[qurl]); targetLabel->setStyleSheet("background: transparent; border: none;"); return; }
     QPointer<QLabel> safeLabel(targetLabel);
-    QNetworkReply* reply = netManager->get(QNetworkRequest(QUrl(qurl)));
-    connect(reply, &QNetworkReply::finished, this, [this, reply, safeLabel, qurl, size]() {
-        reply->deleteLater();
-        if (safeLabel && reply->error() == QNetworkReply::NoError) {
-            QPixmap pix; if (pix.loadFromData(reply->readAll())) {
-                QPixmap scaled = pix.scaled(size, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-                headerImageCache.insert(qurl, scaled); safeLabel->setPixmap(scaled); safeLabel->setStyleSheet("background: transparent; border: none;");
-            }
+    badgeCacheManager->DownloadBadge(qurl, [safeLabel, size](const QPixmap& pix) {
+        if (safeLabel && !pix.isNull()) {
+            QPixmap scaled = pix.scaled(size, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+            safeLabel->setPixmap(scaled);
+            safeLabel->setStyleSheet("background: transparent; border: none;");
         }
     });
 }
@@ -551,7 +544,7 @@ void RAOverlayWidget::ApplyRotationAndResize()
     }
 
     int shortSide = std::min(contentWidget->width(), contentWidget->height());
-    bool mini = (shortSide < 420); 
+    bool mini = (shortSide < 420);
 
     avatarLabel->setVisible(!mini);
     usernameLabel->setVisible(!mini);
