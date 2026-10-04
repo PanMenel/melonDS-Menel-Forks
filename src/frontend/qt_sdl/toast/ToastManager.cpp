@@ -1,7 +1,7 @@
 #include "ToastManager.h"
 #include "toast/ToastOverlay.h"
 #include <QLabel>
-#include "config.h"
+#include "Config.h"
 #include "Window.h"
 #include "EmuInstance.h"
 

@@ -45,9 +45,11 @@ RASettingsDialog::RASettingsDialog(EmuInstance* inst, QWidget* parent)
 
         ui->cbRAEnabled->setEnabled(!loggedIn);
         ui->cbRAHardcore->setEnabled(!loggedIn);
-        ui->leRAUsername->setEnabled(!loggedIn);
-        ui->leRAPassword->setEnabled(!loggedIn);
-        ui->btnRALogin->setEnabled(!emuRunning);
+
+        bool isEnabledChecked = ui->cbRAEnabled->isChecked();
+        ui->leRAUsername->setEnabled(!loggedIn && isEnabledChecked);
+        ui->leRAPassword->setEnabled(!loggedIn && isEnabledChecked);
+        ui->btnRALogin->setEnabled(!emuRunning && isEnabledChecked);
 
         if (emuRunning) {
             ui->btnRALogin->setToolTip(
@@ -74,6 +76,10 @@ RASettingsDialog::RASettingsDialog(EmuInstance* inst, QWidget* parent)
         }
     };
 
+    connect(ui->cbRAEnabled, &QCheckBox::stateChanged, this, [UpdateRAUI](int) {
+        UpdateRAUI();
+    });
+
     UpdateRAUI();
 
     connect(ui->btnRALogin, &QPushButton::clicked, this, [this, UpdateRAUI]() {
@@ -98,6 +104,10 @@ RASettingsDialog::RASettingsDialog(EmuInstance* inst, QWidget* parent)
             std::string user = ui->leRAUsername->text().toStdString();
             std::string pass = ui->leRAPassword->text().toStdString();
             if (user.empty() || pass.empty()) return;
+
+            if (!ra->IsEnabled()) {
+                ra->Enable();
+            }
 
             ra->LoginWithPassword(user.c_str(), pass.c_str(), ui->cbRAHardcore->isChecked());
 

@@ -43,6 +43,7 @@
 #ifdef RETROACHIEVEMENTS_ENABLED
 #include "../../RetroAchievements/RAClient.h"
 #endif
+#include "rcheevos/include/rc_hash.h"
 
 #include "NDS.h"
 #include "DSi.h"
@@ -170,6 +171,9 @@ EmuInstance::~EmuInstance()
     emuThread->wait();
     #ifdef RETROACHIEVEMENTS_ENABLED
     RAContext* ra = getRA();
+    if (nds) {
+        nds->SetRAContext(nullptr);
+    }
     ra->Shutdown();
     #endif
     delete emuThread;
@@ -1904,6 +1908,24 @@ bool EmuInstance::loadROM(QStringList filepath, bool reset, QString& errorstr)
     baseROMDir = basepath;
     baseROMName = romname;
     baseAssetName = romname.substr(0, romname.rfind('.'));
+
+#ifdef RETROACHIEVEMENTS_ENABLED
+    if (filedata && filelen > 0)
+    {
+        char ra_hash[33] = {0};
+        const bool ok = rc_hash_generate_from_buffer(
+            ra_hash,
+            RC_CONSOLE_NINTENDO_DS,
+            filedata.get(),
+            filelen
+        );
+
+        if (ok && ra)
+        {
+            ra->SetPendingGameHash(ra_hash);
+        }
+    }
+#endif
 
     u32 savelen = 0;
     std::unique_ptr<u8[]> savedata = nullptr;

@@ -264,6 +264,7 @@ public: // TODO: Encapsulate the rest of these members
     RAContext* ra = nullptr;
     void SetRAContext(RAContext* ctx) noexcept { ra = ctx; }
     bool IsGameRunning() const { return RunningGame; }
+    size_t ReadPhysicalMemory(u32 addr, u8* buffer, size_t size);
     #endif
     void* UserData;
 

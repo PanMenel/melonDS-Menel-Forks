@@ -797,16 +797,6 @@ void NDS::SetNDSCart(std::unique_ptr<NDSCart::CartCommon>&& cart)
     // The existing cart will always be ejected;
     // if cart is null, then that's equivalent to ejecting a cart
     // without inserting a new one.
-    #ifdef RETROACHIEVEMENTS_ENABLED
-    if (ra) {
-        auto cart = NDSCartSlot.GetCart();
-        if (cart) {
-            const char* h = cart->GetRAHash();
-            if (h && h[0])
-                ra->SetPendingGameHash(h);
-        }
-    }
-    #endif
 }
 
 void NDS::SetNDSSave(const u8* savedata, u32 savelen)
@@ -4256,5 +4246,62 @@ void NDS::ARM7IOWrite32(u32 addr, u32 val)
 
     Log(LogLevel::Debug, "unknown ARM7 IO write32 %08X %08X %08X\n", addr, val, ARM7.R[15]);
 }
+
+#ifdef RETROACHIEVEMENTS_ENABLED
+size_t NDS::ReadPhysicalMemory(u32 address, u8* buffer, size_t size)
+{
+    if (!buffer || size == 0) return 0;
+
+    if (address < 0x00400000) {
+        u32 count = std::min((u32)size, 0x00400000 - address);
+        memcpy(buffer, MainRAM + address, count);
+        return count;
+    }
+    if (address >= 0x00400000 && address < 0x00408000) {
+        u32 offset = address - 0x00400000;
+        u32 count = std::min((u32)size, 0x00408000 - address);
+        memcpy(buffer, SharedWRAM + offset, count);
+        return count;
+    }
+    if (address >= 0x00408000 && address < 0x00418000) {
+        u32 offset = address - 0x00408000;
+        u32 count = std::min((u32)size, 0x00418000 - address);
+        memcpy(buffer, ARM7WRAM + offset, count);
+        return count;
+    }
+    if (address >= 0x00480000 && address < 0x00580000) {
+        u32 offset = address - 0x00480000;
+        u32 remaining = std::min((u32)size, 0x00580000 - address);
+        u32 copied = 0;
+        struct { u8* data; u32 size; } banks[] = {
+            {GPU.VRAM_A, 128*1024}, {GPU.VRAM_B, 128*1024}, {GPU.VRAM_C, 128*1024},
+            {GPU.VRAM_D, 128*1024}, {GPU.VRAM_E,  64*1024}, {GPU.VRAM_F,  16*1024},
+            {GPU.VRAM_G,  16*1024}, {GPU.VRAM_H,  32*1024}, {GPU.VRAM_I,  16*1024}
+        };
+        u32 bank_offset = 0;
+        for (int i = 0; i < 9; ++i) {
+            if (offset >= bank_offset + banks[i].size) {
+                bank_offset += banks[i].size;
+                continue;
+            }
+            u32 local_offset = offset - bank_offset;
+            u32 to_copy = std::min(remaining - copied, banks[i].size - local_offset);
+            memcpy(buffer + copied, banks[i].data + local_offset, to_copy);
+            copied += to_copy;
+            if (copied >= remaining) break;
+            bank_offset += banks[i].size;
+        }
+        return copied;
+    }
+    if (address >= 0x00600000 && address < 0x00602000) {
+        u32 offset = address - 0x00600000;
+        u32 count = std::min((u32)size, 0x00602000 - address);
+        u32 io_base = 0x04000000 + offset;
+        for (u32 i = 0; i < count; ++i) buffer[i] = ARM9Read8(io_base + i);
+        return count;
+    }
+    return 0;
+}
+#endif
 
 }

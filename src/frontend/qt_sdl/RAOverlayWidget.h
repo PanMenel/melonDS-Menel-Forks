@@ -3,7 +3,7 @@
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QGraphicsProxyWidget>
-#include <QNetworkAccessManager>
+#include "toast/BadgeCache.h"
 #include <QHash>
 #include <QPixmap>
 #include <QLabel>
@@ -45,7 +45,7 @@ private:
     QWidget* CreateCollapsibleSection(const QString& title, int count, QVBoxLayout** innerLayout);
 
     EmuInstance* emuInstance;
-    QNetworkAccessManager* netManager;
+    BadgeCache* badgeCacheManager;
 
     QGraphicsScene* scene;
     QGraphicsProxyWidget* proxy;
@@ -60,8 +60,6 @@ private:
     QWidget* listContainer;
     QVBoxLayout* listLayout;
 
-    QHash<QString, QPixmap> badgeCache;
-    QHash<QString, QPixmap> headerImageCache;
     QTimer* clockTimer;
     
     int m_currentRotation = 0;

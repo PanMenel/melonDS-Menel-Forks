@@ -8,7 +8,6 @@
 #include <rcheevos/include/rc_client.h>
 #include <rcheevos/src/rc_version.h>
 #include <rcheevos/include/rc_runtime.h>
-#include "RetroAchievements/cacert.c"
 #include "version.h"
 #include "Savestate.h"
 #include <chrono>
@@ -627,79 +626,7 @@ uint32_t RAContext::ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size,
 
     memset(buffer, 0, size);
 
-    if (address < 0x00400000)
-    {
-        uint32_t count = std::min(size, 0x00400000 - address);
-        memcpy(buffer, ctx->nds->MainRAM + address, count);
-        return count;
-    }
-
-    if (address >= 0x00400000 && address < 0x00408000)
-    {
-        uint32_t offset = address - 0x00400000;
-        uint32_t count = std::min(size, 0x00408000 - address);
-        memcpy(buffer, ctx->nds->SharedWRAM + offset, count);
-        return count;
-    }
-
-    if (address >= 0x00408000 && address < 0x00418000)
-    {
-        uint32_t offset = address - 0x00408000;
-        uint32_t count = std::min(size, 0x00418000 - address);
-        memcpy(buffer, ctx->nds->ARM7WRAM + offset, count);
-        return count;
-    }
-
-    if (address >= 0x00480000 && address < 0x00580000)
-    {
-        uint32_t offset = address - 0x00480000;
-        uint32_t remaining = std::min(size, 0x00580000 - address);
-        uint32_t copied = 0;
-
-        struct { uint8_t* data; uint32_t size; } banks[] = {
-            {ctx->nds->GPU.VRAM_A, 128*1024},
-            {ctx->nds->GPU.VRAM_B, 128*1024},
-            {ctx->nds->GPU.VRAM_C, 128*1024},
-            {ctx->nds->GPU.VRAM_D, 128*1024},
-            {ctx->nds->GPU.VRAM_E,  64*1024},
-            {ctx->nds->GPU.VRAM_F,  16*1024},
-            {ctx->nds->GPU.VRAM_G,  16*1024},
-            {ctx->nds->GPU.VRAM_H,  32*1024},
-            {ctx->nds->GPU.VRAM_I,  16*1024}
-        };
-        uint32_t bank_offset = 0;
-
-        for (int i = 0; i < 9; ++i) {
-            if (offset >= bank_offset + banks[i].size) {
-                bank_offset += banks[i].size;
-                continue;
-            }
-
-            uint32_t local_offset = offset - bank_offset;
-            uint32_t to_copy = std::min(remaining - copied, banks[i].size - local_offset);
-            memcpy(buffer + copied, banks[i].data + local_offset, to_copy);
-            copied += to_copy;
-
-            if (copied >= remaining) break;
-
-            bank_offset += banks[i].size;
-        }
-
-        return copied;
-    }
-
-    if (address >= 0x00600000 && address < 0x00602000)
-    {
-        uint32_t offset = address - 0x00600000;
-        uint32_t count = std::min(size, 0x00602000 - address);
-        uint32_t io_base = 0x04000000 + offset;
-
-        for (uint32_t i = 0; i < count; ++i) {
-            buffer[i] = ctx->nds->ARM9Read8(io_base + i);
-        }
-        return count;
-    }
-    return 0;
+    return ctx->nds->ReadPhysicalMemory(address, buffer, size);
 }
 
 static curl_blob s_cacertBlob = {
