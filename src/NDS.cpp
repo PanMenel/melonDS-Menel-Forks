@@ -553,9 +553,6 @@ void NDS::Reset()
     SPI.Reset();
     RTC.Reset();
     Wifi.Reset();
-    memset(MainRAM, 0, MainRAMMask + 1);
-    memset(SharedWRAM, 0, 0x8000);
-    memset(ARM7WRAM, 0, 0x10000);
 }
 
 void NDS::Start()
